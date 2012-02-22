@@ -4,6 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
+    /*
+     Eventual usage is to get this working to use search via multiple extensions
+     */
     public static class DirectoryHelper{
         public static IEnumerable<FileInfo> GetFilesByExtensions(this DirectoryInfo dir, params string[] extensions)
         {
@@ -15,7 +18,11 @@ using System.Text;
             return files.Where(f => extensions.Contains(f.Extension));
         }
     }
-
+    /*
+     FileHelper class
+     * currently deals with finding files only
+     * future: read,write espcially for caching plus minification
+     */
     public class FileHelper
     {
         private string pathname;
@@ -29,6 +36,35 @@ using System.Text;
         {
             this.setPath(path);
         }
+        /*
+         * Future OPEN file function
+         * @return bool false
+        */
+        public bool open()
+        {
+            return false;
+        }
+        /*
+         * Future READ file function
+         * @return bool false
+        */
+        public bool read()
+        {
+            return false;
+        }
+        /*
+         * Future WRITE file function
+         * @return bool false
+        */
+        public bool write()
+        {
+            return false;
+        }
+        /*
+         * setPath
+         * @param string set the initial Path to work from 
+         * @return string current path
+        */
         public string setPath(string path){
             if(path.Length > 0){
                 if (this._validatepath(path))
@@ -37,24 +73,34 @@ using System.Text;
                 }
                 else
                 {
+                    //If the path isn't valid let's handle that
                     throw new System.InvalidOperationException("Path set is not a valid path");
                 }
             }else{
+                //We need something passed
                 throw new System.ArgumentException("Please specify a path","path");
             }
             return this.pathname;
         }
+        /*
+         * @return string current path
+        */
         public string getPath()
         {
             return this.pathname;
         }
+        /*
+         * @param string path to validate
+         * @return bool valid or not
+        */
         public bool _validatepath(string path)
         {
-            bool result = false;
+            bool result = false;//Start of invalid
+            //Simple length test
             if (path.Length > 0)
             {
+                //Quick check if what we have is valid... TODO: also need to check for permissions
                 DirectoryInfo dirTest = new DirectoryInfo(path);
-                
                 if (dirTest.Exists)
                 {
                     result = true;
@@ -63,38 +109,49 @@ using System.Text;
             return result;
         }
         
-
-        
-        public string[] findfiles(string extension)
+        /*
+         * @param string extension to search for ex "*.mp3" current state only accepts one
+         * @param bool true if we want to search subdirectories, is set to false by default
+         * @return string[] array of filenames
+        */
+        public string[] findfiles(string extension,bool verbose = false)
         {
-            string[] result = {};
-            int fcount = 0;
+            string[] result = {};//default restult
+            int fcount = 0;//counter
             
             DirectoryInfo dir = new DirectoryInfo(this.pathname);
-            FileInfo[] tmpfiles = dir.GetFiles(extension, SearchOption.AllDirectories);
+            FileInfo[] tmpfiles = dir.GetFiles(extension, verbose == true ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly);
             //Need to update the Extension above to allow this code to work as intended
             //FileInfo[] tmpfiles = dir.GetFilesByExtensions(".jpg", ".png", ".gif");
-            Console.WriteLine(tmpfiles.Length);
-            string[] files = new string[tmpfiles.Length];
-            foreach (FileInfo file in tmpfiles)
+            //Let's make sure we have something to work with before do anything
+            if (tmpfiles.Length > 0)
             {
-                //Grab the full filename
-                string tmpname = file.FullName;
-                //remove the original path and extra \'s
-                tmpname = tmpname.Replace(this.pathname+"\\", "");
-                tmpname = tmpname.Replace("\\", ",");
-                string[] tmpfilearray = tmpname.Split(',');
-                //Grab the last item off of the array and save it in our array
-                Stack<string> myStack = new Stack<string>(tmpfilearray);
-                files[fcount++] = myStack.Pop();
-            }
-            if (files.Length > 0)
-            {
-                result = files;
+                string[] files = new string[tmpfiles.Length];
+                foreach (FileInfo file in tmpfiles)
+                {
+                    //Grab the full filename
+                    string tmpname = file.FullName;
+                    //remove the original path and extra \'s
+                    tmpname = tmpname.Replace(this.pathname + "\\", "");
+                    tmpname = tmpname.Replace("\\", ",");
+                    string[] tmpfilearray = tmpname.Split(',');
+                    //Grab the last item off of the array and save it in our array
+                    Stack<string> myStack = new Stack<string>(tmpfilearray);
+                    //Currently we're just returning the actual file but I will want to possible return the path as well
+                    files[fcount++] = myStack.Pop();
+                }
+                if (files.Length > 0)
+                {
+                    result = files;
+                }
             }
             return result;
         }
     }
+/*
+ *Test Class 
+ * Just runs through a single test at the moment until this rest of the class is developed
+ */
     class TestFileHelper
     {
         static void Main()
@@ -102,10 +159,13 @@ using System.Text;
             FileHelper fh = new FileHelper();
             fh.setPath("D:\\Music");
             Console.WriteLine(fh.getPath());
-            string[] files = fh.findfiles("*.mp3");
+            //Search sub directories
+            string[] files = fh.findfiles("*.mp3",true);
+            Console.WriteLine("Number of Files: "+files.Length);
+            Console.WriteLine("File Names:");
             foreach (string fname in files)
             {
-                   Console.WriteLine(fname);
+                Console.WriteLine(fname);
             }
         }
     }
