@@ -5,20 +5,6 @@ using System.Linq;
 using System.Text;
 
     /*
-     Eventual usage is to get this working to use search via multiple extensions
-     */
-    public static class DirectoryHelper{
-        public static IEnumerable<FileInfo> GetFilesByExtensions(this DirectoryInfo dir, params string[] extensions)
-        {
-            if (extensions == null)
-            {
-                throw new ArgumentNullException("extensions");
-            }
-            IEnumerable<FileInfo> files = dir.EnumerateFiles();
-            return files.Where(f => extensions.Contains(f.Extension));
-        }
-    }
-    /*
      FileHelper class
      * currently deals with finding files only
      * future: read,write espcially for caching plus minification
@@ -74,7 +60,7 @@ using System.Text;
                 else
                 {
                     //If the path isn't valid let's handle that
-                    throw new System.InvalidOperationException("Path set is not a valid path");
+                    throw new System.ArgumentException("Path set is not a valid path");
                 }
             }else{
                 //We need something passed
@@ -114,15 +100,22 @@ using System.Text;
          * @param bool true if we want to search subdirectories, is set to false by default
          * @return string[] array of filenames
         */
-        public string[] findfiles(string extension,bool verbose = false)
+        public string[] findfiles(string[] extensions,bool verbose = false)
         {
+            if (extensions == null)//Check for null
+            {
+                throw new System.ArgumentNullException("Please specify an array of extensions", "extensions");
+            }
+            else if (extensions.Length == 0)
+            {
+                throw new System.ArgumentException("Please specify an array of extensions", "extensions");
+            }
             string[] result = {};//default restult
             int fcount = 0;//counter
             
             DirectoryInfo dir = new DirectoryInfo(this.pathname);
-            FileInfo[] tmpfiles = dir.GetFiles(extension, verbose == true ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly);
-            //Need to update the Extension above to allow this code to work as intended
-            //FileInfo[] tmpfiles = dir.GetFilesByExtensions(".jpg", ".png", ".gif");
+            FileInfo[] tmpfiles = dir.EnumerateFiles("*", verbose == true ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly).Where(f => extensions.Contains(f.Extension.ToLower())).ToArray();
+
             //Let's make sure we have something to work with before do anything
             if (tmpfiles.Length > 0)
             {
@@ -156,16 +149,49 @@ using System.Text;
     {
         static void Main()
         {
+            //Run through once to make sure the basics work
             FileHelper fh = new FileHelper();
             fh.setPath("D:\\Music");
             Console.WriteLine(fh.getPath());
             //Search sub directories
-            string[] files = fh.findfiles("*.mp3",true);
+            //string[] extensions = new[] { ".jpg", ".tiff", ".bmp" };
+            string[] extensions = new[] { ".mp3" };
+            string[] files = fh.findfiles(extensions,true);
             Console.WriteLine("Number of Files: "+files.Length);
             Console.WriteLine("File Names:");
             foreach (string fname in files)
             {
                 Console.WriteLine(fname);
+            }
+
+            /*******Now lets try and break this***********/
+            //Try an invalid Path
+            try
+            {
+                fh.setPath("Q:\\Music");//Q drive does not exist
+            }
+            catch (ArgumentException e)
+            {
+                Console.WriteLine("Crisis averted:" + e.Message);
+            }
+            //Try an empty string
+            try
+            {
+                fh.setPath(""); //throwing over an empty path
+            }
+            catch (ArgumentException e)
+            {
+                Console.WriteLine("Crisis averted:" + e.Message);
+            }
+            //Try an empty extension
+            try
+            {
+                fh.setPath("D:\\Music"); //use a normal path again
+                files = fh.findfiles(null, true); //null the extensions
+            }
+            catch (ArgumentException e)
+            {
+                Console.WriteLine("Crisis averted:" + e.Message);
             }
         }
     }
